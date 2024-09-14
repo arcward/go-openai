@@ -8,25 +8,26 @@ import (
 )
 
 type Run struct {
-	ID             string             `json:"id"`
-	Object         string             `json:"object"`
-	CreatedAt      int64              `json:"created_at"`
-	ThreadID       string             `json:"thread_id"`
-	AssistantID    string             `json:"assistant_id"`
-	Status         RunStatus          `json:"status"`
-	RequiredAction *RunRequiredAction `json:"required_action,omitempty"`
-	LastError      *RunLastError      `json:"last_error,omitempty"`
-	ExpiresAt      int64              `json:"expires_at"`
-	StartedAt      *int64             `json:"started_at,omitempty"`
-	CancelledAt    *int64             `json:"cancelled_at,omitempty"`
-	FailedAt       *int64             `json:"failed_at,omitempty"`
-	CompletedAt    *int64             `json:"completed_at,omitempty"`
-	Model          string             `json:"model"`
-	Instructions   string             `json:"instructions,omitempty"`
-	Tools          []Tool             `json:"tools"`
-	FileIDS        []string           `json:"file_ids"` //nolint:revive // backwards-compatibility
-	Metadata       map[string]any     `json:"metadata"`
-	Usage          Usage              `json:"usage,omitempty"`
+	ID                string                `json:"id"`
+	Object            string                `json:"object"`
+	CreatedAt         int64                 `json:"created_at"`
+	ThreadID          string                `json:"thread_id"`
+	AssistantID       string                `json:"assistant_id"`
+	Status            RunStatus             `json:"status"`
+	RequiredAction    *RunRequiredAction    `json:"required_action,omitempty"`
+	IncompleteDetails *RunIncompleteDetails `json:"incomplete_details,omitempty"`
+	LastError         *RunLastError         `json:"last_error,omitempty"`
+	ExpiresAt         int64                 `json:"expires_at"`
+	StartedAt         *int64                `json:"started_at,omitempty"`
+	CancelledAt       *int64                `json:"cancelled_at,omitempty"`
+	FailedAt          *int64                `json:"failed_at,omitempty"`
+	CompletedAt       *int64                `json:"completed_at,omitempty"`
+	Model             string                `json:"model"`
+	Instructions      string                `json:"instructions,omitempty"`
+	Tools             []Tool                `json:"tools"`
+	FileIDS           []string              `json:"file_ids"` //nolint:revive // backwards-compatibility
+	Metadata          map[string]any        `json:"metadata"`
+	Usage             Usage                 `json:"usage,omitempty"`
 
 	Temperature *float32 `json:"temperature,omitempty"`
 	// The maximum number of prompt tokens that may be used over the course of the run.
@@ -39,6 +40,10 @@ type Run struct {
 	TruncationStrategy *ThreadTruncationStrategy `json:"truncation_strategy,omitempty"`
 
 	httpHeader
+}
+
+type RunIncompleteDetails struct {
+	Reason string `json:"reason"`
 }
 
 type RunStatus string
@@ -240,7 +245,8 @@ func (c *Client) CreateRun(
 		http.MethodPost,
 		c.fullURL(urlSuffix),
 		withBody(request),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
@@ -260,7 +266,8 @@ func (c *Client) RetrieveRun(
 		ctx,
 		http.MethodGet,
 		c.fullURL(urlSuffix),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
@@ -282,7 +289,8 @@ func (c *Client) ModifyRun(
 		http.MethodPost,
 		c.fullURL(urlSuffix),
 		withBody(request),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
@@ -321,7 +329,8 @@ func (c *Client) ListRuns(
 		ctx,
 		http.MethodGet,
 		c.fullURL(urlSuffix),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
@@ -335,14 +344,16 @@ func (c *Client) SubmitToolOutputs(
 	ctx context.Context,
 	threadID string,
 	runID string,
-	request SubmitToolOutputsRequest) (response Run, err error) {
+	request SubmitToolOutputsRequest,
+) (response Run, err error) {
 	urlSuffix := fmt.Sprintf("/threads/%s/runs/%s/submit_tool_outputs", threadID, runID)
 	req, err := c.newRequest(
 		ctx,
 		http.MethodPost,
 		c.fullURL(urlSuffix),
 		withBody(request),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
@@ -355,13 +366,15 @@ func (c *Client) SubmitToolOutputs(
 func (c *Client) CancelRun(
 	ctx context.Context,
 	threadID string,
-	runID string) (response Run, err error) {
+	runID string,
+) (response Run, err error) {
 	urlSuffix := fmt.Sprintf("/threads/%s/runs/%s/cancel", threadID, runID)
 	req, err := c.newRequest(
 		ctx,
 		http.MethodPost,
 		c.fullURL(urlSuffix),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
@@ -373,14 +386,16 @@ func (c *Client) CancelRun(
 // CreateThreadAndRun submits tool outputs.
 func (c *Client) CreateThreadAndRun(
 	ctx context.Context,
-	request CreateThreadAndRunRequest) (response Run, err error) {
+	request CreateThreadAndRunRequest,
+) (response Run, err error) {
 	urlSuffix := "/threads/runs"
 	req, err := c.newRequest(
 		ctx,
 		http.MethodPost,
 		c.fullURL(urlSuffix),
 		withBody(request),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
@@ -401,7 +416,8 @@ func (c *Client) RetrieveRunStep(
 		ctx,
 		http.MethodGet,
 		c.fullURL(urlSuffix),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
@@ -441,7 +457,8 @@ func (c *Client) ListRunSteps(
 		ctx,
 		http.MethodGet,
 		c.fullURL(urlSuffix),
-		withBetaAssistantVersion(c.config.AssistantVersion))
+		withBetaAssistantVersion(c.config.AssistantVersion),
+	)
 	if err != nil {
 		return
 	}
